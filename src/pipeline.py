@@ -23,11 +23,13 @@ class MyPipeline():
 
         if not os.path.exists(os.path.join(parent_dir, "logs")):
             os.makedirs(os.path.join(parent_dir, "logs"))
-        self.log_file = os.path.join(parent_dir, "logs\\" + self.name + ".log")
-        # create post_history file if it doesn't exist
-        if not os.path.join(parent_dir, "history"):
+        self.log_file = os.path.join(parent_dir, "logs", self.name + ".log")
+        
+        # Create post_history file if it doesn't exist
+        if not os.path.exists(os.path.join(parent_dir, "history")):
             os.makedirs(os.path.join(parent_dir, "history"))
-        self.history_file = os.path.join(parent_dir, "history\\" + self.name + ".hist")
+        self.history_file = os.path.join(parent_dir, "history", self.name + ".hist")
+        
         with open(self.history_file, 'a') as f:
             pass
         with open(self.log_file, 'a') as f:
