@@ -1,0 +1,6 @@
+APScheduler==3.10.4
+beautifulsoup4==4.12.3
+cron_descriptor==1.4.3
+Flask==3.0.3
+Requests==2.31.0
+tweepy==4.14.0
