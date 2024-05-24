@@ -4,3 +4,6 @@ cron_descriptor==1.4.3
 Flask==3.0.3
 Requests==2.31.0
 tweepy==4.14.0
+SQLAlchemy==1.4.31
+psycopg2-binary
+alembic==1.7.4
