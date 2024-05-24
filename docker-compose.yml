@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: app_db
+    image: postgres:14
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    container_name: app_worker
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://user:password@db/appdb
+    volumes:
+      - .:/app
+    working_dir: /app
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "securepassword"  # Change the password as needed
+      GF_SECURITY_ADMIN_USER: "admin"
+
+volumes:
+  postgres-data:
+  grafana-data:
+
