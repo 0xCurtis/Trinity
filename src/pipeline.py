@@ -3,8 +3,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import os
 import sys
+from models.base import Session
+from models.log_base import LogEntry
+from models.history import MediaHistory
+from models.pipelines_infos import PipelineInfos
 from cron_descriptor import get_description, ExpressionDescriptor
-
 
 class MyPipeline():
     def __init__(self, args, execution: list[callable], scheduler: BackgroundScheduler = None):
@@ -15,46 +18,52 @@ class MyPipeline():
         self.description = args['description']
         self.name = args['name']
         self.add_time_based_pipeline(trigger='interval', tasks=execution, seconds=60, start_args=self.start_args)
-
         self.name = args['name']
-        script_path = os.path.abspath(__file__)
-        script_dir = os.path.dirname(script_path)
-        parent_dir = os.path.dirname(script_dir)
 
-        if not os.path.exists(os.path.join(parent_dir, "logs")):
-            os.makedirs(os.path.join(parent_dir, "logs"))
-        self.log_file = os.path.join(parent_dir, "logs", self.name + ".log")
-        
-        # Create post_history file if it doesn't exist
-        if not os.path.exists(os.path.join(parent_dir, "history")):
-            os.makedirs(os.path.join(parent_dir, "history"))
-        self.history_file = os.path.join(parent_dir, "history", self.name + ".hist")
-        
-        with open(self.history_file, 'a') as f:
-            pass
-        with open(self.log_file, 'a') as f:
-            f.write("Pipeline " + self.name + " created at " + str(datetime.now()) + "\n")
+        # add the pipeline to the database or update it if it already exists
+        self.session = Session()
+        self.pipeline_db = self.session.query(PipelineInfos).filter(PipelineInfos.name == self.name).first()
+        if self.pipeline_db:
+            self.pipeline_db.description = self.description
+            self.pipeline_db.source = self.tasks[0].__name__
+            self.pipeline_db.middleware = ",".join([task.__name__ for task in self.tasks[1:-1]])
+            self.pipeline_db.post = self.tasks[-1].__name__
+            self.pipeline_db.trigger = 'interval'
+            self.pipeline_db.next_run = self.scheduler.get_job(self.name).next_run_time
+        else:
+            self.pipeline = PipelineInfos(name=self.name, description=self.description, source=self.tasks[0].__name__, middleware=",".join([task.__name__ for task in self.tasks[1:-1]]), post=self.tasks[-1].__name__, trigger='interval', next_run=self.scheduler.get_job(self.name).next_run_time)
+
+        self.session.add(self.pipeline)
+        self.session.commit()
 
     def check_post_history(self, id):
         """
         if id is in the history file, return False else True
         :param id: ID to check
         """
-        with open(self.history_file, 'r') as f:
-            history = f.read().splitlines()
-        return id in history
+        return self.session.query(MediaHistory).filter(MediaHistory.pipeline_name == self.name, MediaHistory.media_id == id).count() > 0
 
     def add_to_post_history(self, id):
         """
         Add id to the post history file
         :param id: ID to add
         """
-        with open(self.history_file, 'a') as f:
-            f.write(id + "\n")
+        log_entry = MediaHistory(pipeline_name=self.name, media_id=id)
+        self.session.add(log_entry)
+        self.session.commit()
 
     def log(self, message):
-        with open(self.log_file, 'a') as f:
-            f.write(str(datetime.now()) + " : " + message + "\n")
+        """
+        Log a message to the database.
+        """
+        # also log the message in a file
+        with open('error.log', 'a') as f:
+            f.write(f"{datetime.now()} : {message}\n")
+
+        log_entry = LogEntry(source=self.name, message=message)
+        self.session.add(log_entry)
+        self.session.commit()
+
 
     def execute_pipeline(self, tasks, start_args):
         """
@@ -84,6 +93,11 @@ class MyPipeline():
             for media in self.result['media']:
                 os.remove(media['path'])
                 self.log(f"Successfully deleted {self.result['media']}")
+        # update the next run time of the pipeline and the last run time in the database
+        self.pipeline_db = self.session.query(PipelineInfos).filter(PipelineInfos.name == self.name).first()
+        self.pipeline_db.last_run = datetime.now()
+        self.pipeline_db.next_run = self.scheduler.get_job(self.name).next_run_time
+        self.session.commit()
         return self.result
 
     def add_media(self, media_type, path):
@@ -108,6 +122,7 @@ class MyPipeline():
         :param trigger_args: Arguments for the trigger. E.g., seconds=10 for an interval trigger.
         """
         if start_args['instant_launch'] == True:
+            print("Instant launch is set to True")
             self.scheduler.add_job(self.execute_pipeline, CronTrigger.from_crontab(start_args['launch_condition']['time']), id=self.name, args=[tasks, start_args], **trigger_args, next_run_time=datetime.now())
         else:
             self.scheduler.add_job(self.execute_pipeline, CronTrigger.from_crontab(start_args['launch_condition']['time']),

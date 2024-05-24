@@ -24,7 +24,6 @@ def check_token():
     script_dir = os.path.dirname(script_path)
     file_path = os.path.join(script_dir, "red_gifs.token")
     if not os.path.exists(file_path):
-        print("Token file not found, creating")
         with open(file_path, 'w') as f:
             f.write(get_auth_token())
     with open(file_path, 'r') as f:
@@ -34,7 +33,6 @@ def check_token():
     }
     # make a dummy request to test the token
     if requests.get("https://api.redgifs.com/v2/gifs/search?order=best&count=40&page=1", headers=headers).status_code != 200:
-        print("Token is invalid, refreshing")
         token = get_auth_token()
         headers = {
         "Authorization": f"Bearer {token}",

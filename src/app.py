@@ -2,21 +2,12 @@ import json
 import sys
 
 sys.path.append('src')
-import logging
-from pipeline import MyPipeline
 from pipeline_store import MyPipelineStore
 from maker import *
 from poster import *
 import importlib
-
-# import flask and make a route to return the repr of the store
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return Store.make_json_dict()
+from models.base import Base, engine, Session
+from argparse import ArgumentParser
 
 
 def load_function(full_function_path):
@@ -44,12 +35,8 @@ def check_keys(*keys):
 
     return decorator
 
-
-log = logging.getLogger('werkzeug')
-log.disabled = True
-
-
-def setup_store(store: MyPipelineStore):
+def setup_store(debug=False):
+    store = MyPipelineStore()
     with open('data.json', 'r', encoding='utf-8') as conf:
         data = conf.read()
         json_dict = json.loads(data)
@@ -57,18 +44,19 @@ def setup_store(store: MyPipelineStore):
 
         for pipeline_dict in pipelines:
             if not pipeline_dict['enabled']:
-                print(f"SKIPPING : {pipeline_dict['name']}")
                 continue
             tasks = [pipeline_dict["source"]["task"]] + pipeline_dict["middleware"] + [pipeline_dict["post"]["task"]]
             tasks_callable = [load_function(task) for task in tasks]
             store.add_pipeline(pipeline_dict, tasks_callable)
 
 
+
 if __name__ == "__main__":
-    Store = MyPipelineStore()
-    setup_store(Store)
-    print("Scheduler started")
-    app.run(port=4242)
+    parser = ArgumentParser()
+    parser.add_argument('--test', action='store_true', default=False, help='Run the app in test mode')
+    args = parser.parse_args()
+    store = setup_store(debug=args.test)
+    Base.metadata.create_all(bind=engine)
 
     while True:
         pass
