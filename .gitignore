@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.pyc
 # C extensions
 *.so
 
@@ -161,3 +161,7 @@ cython_debug/
 
 # exclude the data.json file
 data.json
+
+# common project files
+*.log
+*.hist
