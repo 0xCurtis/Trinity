@@ -20,4 +20,4 @@ Base = declarative_base()
 
 # Optional: function to close database connection cleanly
 def shutdown_session(exception=None):
-    Session.remove()
+    Session.remove() 

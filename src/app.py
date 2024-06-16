@@ -8,6 +8,17 @@ from poster import *
 import importlib
 from models.base import Base, engine, Session
 from argparse import ArgumentParser
+from alembic.config import Config
+from alembic import command
+import os
+from models.base import Session
+from models.pipelines_infos import PipelineInfos
+
+def run_migrations(is_local=False):
+    file_name = 'alembic_local.ini' if is_local else 'alembic_prod.ini'
+    alembic_ini_path = os.path.join(os.path.dirname(__file__), '..', file_name)
+    alembic_cfg = Config(alembic_ini_path)
+    command.upgrade(alembic_cfg, 'head')
 
 
 def load_function(full_function_path):
@@ -37,6 +48,13 @@ def check_keys(*keys):
 
 def setup_store(debug=False):
     store = MyPipelineStore()
+
+    pipelines_info = Session.query(PipelineInfos).all()
+    for pipeline_info in pipelines_info:
+        pipeline_info.enabled = False
+    Session.commit()
+    exit(0)
+    
     with open('data.json', 'r', encoding='utf-8') as conf:
         data = conf.read()
         json_dict = json.loads(data)
@@ -52,9 +70,11 @@ def setup_store(debug=False):
 
 
 if __name__ == "__main__":
+
     parser = ArgumentParser()
     parser.add_argument('--test', action='store_true', default=False, help='Run the app in test mode')
     args = parser.parse_args()
+    run_migrations(is_local=args.test)
     store = setup_store(debug=args.test)
     Base.metadata.create_all(bind=engine)
 
