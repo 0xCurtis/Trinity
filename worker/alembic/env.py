@@ -14,10 +14,10 @@ fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from models.base import Base
-from models.history import MediaHistory
-from models.log_base import LogEntry
-from models.pipelines_infos import PipelineInfos
+from common.models.base import Base
+from common.models.history import MediaHistory
+from common.models.log_base import LogEntry
+from common.models.pipelines_infos import PipelineInfos
 
 target_metadata = Base.metadata
 

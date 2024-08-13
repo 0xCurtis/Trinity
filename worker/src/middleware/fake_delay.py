@@ -1,6 +1,6 @@
 import time
 import random
-from src.pipeline import MyPipeline
+from pipeline import MyPipeline
 
 def delay(pipeline : MyPipeline=None, args : dict=None):
     random_delay = random.randint(1, 10)

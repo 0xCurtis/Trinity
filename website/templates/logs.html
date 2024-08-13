@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Query Results</title>
+    <style>
+        .data {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data th, .data td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        .data th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Database Query Results</h1>
+    <a href="/dash/">Go to Dashboard</a>
+    {% for table in tables %}
+        {{ table|safe }}
+    {% endfor %}
+</body>
+</html>

@@ -1,4 +1,4 @@
-from src.pipeline import MyPipeline
+from pipeline import MyPipeline
 
 def string(pipeline: MyPipeline, args):
     print(pipeline)

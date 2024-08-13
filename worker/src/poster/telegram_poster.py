@@ -1,5 +1,5 @@
 import requests
-from src.pipeline import MyPipeline
+from pipeline import MyPipeline
 import json
 
 

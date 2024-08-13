@@ -12,29 +12,37 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
   app:
     container_name: app_worker
-    build: .
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
     depends_on:
       - db
     environment:
       DATABASE_URL: postgresql://user:password@db/appdb
     volumes:
-      - .:/app
-    working_dir: /app
+      - ./common:/app/common
+    working_dir: /app/
+    command: ["python", "-m", "src.app"]
 
-  grafana:
-    container_name: grafana
-    image: grafana/grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
+  web:
+    container_name: app_web
+    build:
+      context: ./website
+      dockerfile: Dockerfile
+    depends_on:
+      - db
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: "securepassword"  # Change the password as needed
-      GF_SECURITY_ADMIN_USER: "admin"
+      DATABASE_URL: postgresql://user:password@db/appdb
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./common:/website/common
+      - ./website:/website
+    working_dir: /website
+    command: python app.py
 
 volumes:
   postgres-data:
-  grafana-data:
-

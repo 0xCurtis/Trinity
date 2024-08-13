@@ -1,6 +1,6 @@
 import json
 import requests
-from src.pipeline import MyPipeline
+from pipeline import MyPipeline
 from bs4 import BeautifulSoup as bs
 import sys, os
 

@@ -1,6 +1,6 @@
 import requests
 import os
-from src.pipeline import MyPipeline
+from pipeline import MyPipeline
 
 """
 No auth required /
