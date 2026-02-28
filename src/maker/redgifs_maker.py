@@ -1,70 +1,97 @@
-import requests
-import os
+import random
+
+import redgifs as rg
+
 from src.pipeline import MyPipeline
+from src.retry import retry_with_backoff
 
-"""
-No auth required /
-
-unique integration
-
-args required :
-    tags : str
-    sort : str
-"""
+_api = None
 
 
-def get_auth_token():
-    base_url = "https://api.redgifs.com/v2/auth/temporary"
-    res = requests.get(base_url, headers={"content-type": "application/x-www-form-urlencoded"})
-    res_json = res.json()
-    return res_json['token']
+def _get_api() -> rg.API:
+    """Get or create the RedGifs API instance."""
+    global _api
+    if _api is None:
+        _api = rg.API()
+        _api.login()
+    return _api
 
-def check_token():
-    script_path = os.path.abspath(__file__)
-    script_dir = os.path.dirname(script_path)
-    file_path = os.path.join(script_dir, "red_gifs.token")
-    if not os.path.exists(file_path):
-        print("Token file not found, creating")
-        with open(file_path, 'w') as f:
-            f.write(get_auth_token())
-    with open(file_path, 'r') as f:
-        token = f.read()
-    headers = {
-        "Authorization": f"Bearer {token}",
-    }
-    # make a dummy request to test the token
-    if requests.get("https://api.redgifs.com/v2/gifs/search?order=best&count=40&page=1", headers=headers).status_code != 200:
-        print("Token is invalid, refreshing")
-        token = get_auth_token()
-        headers = {
-        "Authorization": f"Bearer {token}",
-        }
-        # clean red_gifs.token and write the new token
-        with open(file_path, 'w') as f:
-            f.write(token)
-    return headers
 
-def redgifs(pipeline : MyPipeline = None, args : dict = None) -> dict:
-    headers = check_token()
-    base_url = f"https://api.redgifs.com/v2/gifs/search?order={args['redgifs']['sort']}&count=40&page=1&type=g&search_text={args['redgifs']['tags']}"
-    res = requests.get(base_url, headers=headers)
-    url = res.json()
-    count = 0
-    download_link = url['gifs'][count]['urls']['hd']
-    filename = download_link.split('/')[-1].split('?')[0]
-    while url['gifs'][count]['urls']['hd'] is None or (args["unique_posts"] and pipeline.check_post_history(filename)):
-        count += 1
-        download_link = url['gifs'][count]['urls']['hd']
-        filename = download_link.split('/')[-1].split('?')[0]
-    with open(filename, 'wb') as f:
-        f.write(requests.get(download_link).content)
+def close_api():
+    """Close the API connection."""
+    global _api
+    if _api is not None:
+        _api.close()
+        _api = None
+
+
+@retry_with_backoff(max_retries=3, base_delay=2.0)
+def _fetch_redgifs(args: dict, pipeline) -> list:
+    """Fetch videos from RedGifs API."""
+    api = _get_api()
+
+    tag = args["redgifs"]["tags"]
+    sort = args["redgifs"]["sort"]
+
+    page = random.randint(1, 3)
+
+    order = getattr(rg.Order, sort.upper(), rg.Order.TRENDING)
+
+    response = api.search(tag, order=order, count=40, page=page)
+
+    if not response.gifs:
+        raise ValueError(f"No results found for tag: {tag}")
+
+    return response.gifs
+
+
+def redgifs(pipeline: MyPipeline = None, args: dict = None) -> dict:
+    """Fetch a video from RedGifs and add it to the pipeline."""
+    gifs = _fetch_redgifs(args, pipeline)
+
+    api = _get_api()
+    selected_gif = None
+
+    for gif in gifs:
+        if gif.urls.hd is None:
+            continue
+        filename = gif.urls.hd.split("/")[-1].split("?")[0]
+        if args.get("unique_posts") and pipeline.check_post_history(filename):
+            continue
+        selected_gif = gif
+        break
+
+    if selected_gif is None:
+        raise ValueError(f"All {len(gifs)} videos from RedGifs are already in history")
+
+    filename = selected_gif.urls.hd.split("/")[-1].split("?")[0]
+
+    api.download(selected_gif.urls.hd, filename)
+
     pipeline.add_media("video", filename)
-    pipeline.add_to_post_history(filename)
+    args.setdefault("_add_to_history", []).append(filename)
     return args
 
+
 if __name__ == "__main__":
-    test_dict = {
-        "type": "video",
-        "tags": "women",
-    }
-    redgifs(test_dict) 
+    try:
+        test_dict = {
+            "type": "video",
+            "redgifs": {"tags": "women", "sort": "trending"},
+            "unique_posts": False,
+        }
+
+        class MockPipeline:
+            def __init__(self):
+                self._history = set()
+
+            def check_post_history(self, fn):
+                return fn in self._history
+
+            def add_media(self, t, p):
+                print(f"Added media: {t} - {p}")
+
+        result = redgifs(MockPipeline(), test_dict)
+        print(f"Success: {result.get('_add_to_history', [])}")
+    finally:
+        close_api()

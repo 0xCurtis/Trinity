@@ -159,5 +159,22 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-# exclude the data.json file
+# exclude config and runtime files
 data.json
+.env
+.env.local
+logs/
+history/
+.last_run/
+*.log
+*.hist
+*.lastrun
+.red_gifs.token
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/
+tests/__pycache__/
+
+pipelines/
