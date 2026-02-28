@@ -48,36 +48,6 @@ docker-compose up
 
 Each pipeline is defined by a JSON file:
 
-```json
-{
-  "name": "pipeline_name",
-  "description": "What this pipeline does",
-  "enabled": true,
-  "unique_posts": true,
-  "run_every_minutes": 15,
-  "source": {
-    "task": "src.maker.redgifs_maker.redgifs",
-    "redgifs": {
-      "tags": "lesbian",
-      "sort": "trending"
-    }
-  },
-  "middleware": [],
-  "post": {
-    "task": "src.poster.telegram_poster.telegram"
-  },
-  "auth": {
-    "telegram": {
-      "token": "${TELEGRAM_BOT_TOKEN}"
-    }
-  },
-  "telegram": {
-    "chat_id": "XXX",
-    "buttons": null
-  }
-}
-```
-
 ### Config Reference
 
 | Field | Type | Description |
