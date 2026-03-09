@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trinity Bot Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Trinity Bot Dashboard</h1>
+        <div class="header-actions">
+            <span id="last-updated"></span>
+            <button id="refresh-btn" onclick="refreshAll()">Refresh</button>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="channels">Channels</button>
+        <button class="tab" data-tab="pipelines">Pipelines</button>
+        <button class="tab" data-tab="summary">Summary</button>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="search" placeholder="Search..." oninput="filterTable()">
+        <span id="count"></span>
+    </div>
+
+    <main id="channels" class="tab-content active">
+        <table id="channels-table">
+            <thead>
+                <tr>
+                    <th data-sort="title">Channel Name</th>
+                    <th data-sort="id">Chat ID</th>
+                    <th>Link</th>
+                    <th data-sort="is_public">Public</th>
+                    <th data-sort="member_count">Members</th>
+                    <th data-sort="type">Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </main>
+
+    <main id="pipelines" class="tab-content">
+        <table id="pipelines-table">
+            <thead>
+                <tr>
+                    <th data-sort="name">Pipeline Name</th>
+                    <th data-sort="enabled">Enabled</th>
+                    <th>Source</th>
+                    <th data-sort="target_channel">Target Channel</th>
+                    <th data-sort="run_every_minutes">Run Every</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </main>
+
+    <main id="summary" class="tab-content">
+        <table id="summary-table">
+            <thead>
+                <tr>
+                    <th data-sort="title">Channel</th>
+                    <th data-sort="member_count">Members</th>
+                    <th>Pipelines</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </main>
+
+    <div id="loading" class="loading" style="display: none;">Loading...</div>
+    <div id="error" class="error" style="display: none;"></div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
