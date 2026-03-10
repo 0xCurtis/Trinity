@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 
 BASE_DIR = Path(__file__).parent.parent
-PIPELINES_DIR = BASE_DIR / "pipelines"
+PIPELINES_DIR = BASE_DIR / "bot" / "pipelines"
 
 load_dotenv(Path(__file__).parent / ".env")
 
