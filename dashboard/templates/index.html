@@ -11,14 +11,18 @@
         <h1>Trinity Bot Dashboard</h1>
         <div class="header-actions">
             <span id="last-updated"></span>
+            <button id="theme-btn" onclick="toggleTheme()">🌙</button>
             <button id="refresh-btn" onclick="refreshAll()">Refresh</button>
         </div>
     </header>
 
     <div class="tabs">
-        <button class="tab active" data-tab="channels">Channels</button>
+        <button class="tab active" data-tab="stats">Stats</button>
+        <button class="tab" data-tab="channels">Channels</button>
         <button class="tab" data-tab="pipelines">Pipelines</button>
         <button class="tab" data-tab="summary">Summary</button>
+        <button class="tab" data-tab="history">History</button>
+        <button class="tab" data-tab="logs">Logs</button>
     </div>
 
     <div class="search-bar">
@@ -26,7 +30,36 @@
         <span id="count"></span>
     </div>
 
-    <main id="channels" class="tab-content active">
+    <main id="stats" class="tab-content active">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total-pipelines">-</div>
+                <div class="stat-label">Total Pipelines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-enabled-pipelines">-</div>
+                <div class="stat-label">Enabled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-disabled-pipelines">-</div>
+                <div class="stat-label">Disabled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total-channels">-</div>
+                <div class="stat-label">Channels</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total-members">-</div>
+                <div class="stat-label">Total Members</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-public-channels">-</div>
+                <div class="stat-label">Public</div>
+            </div>
+        </div>
+    </main>
+
+    <main id="channels" class="tab-content">
         <table id="channels-table">
             <thead>
                 <tr>
@@ -69,6 +102,14 @@
             </thead>
             <tbody></tbody>
         </table>
+    </main>
+
+    <main id="history" class="tab-content">
+        <div id="history-container"></div>
+    </main>
+
+    <main id="logs" class="tab-content">
+        <div id="logs-container"></div>
     </main>
 
     <div id="loading" class="loading" style="display: none;">Loading...</div>

@@ -7,8 +7,24 @@ let sortConfig = { key: null, direction: "asc" };
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initSortableHeaders();
+    initTheme();
     refreshAll();
 });
+
+function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark");
+        document.getElementById("theme-btn").textContent = "☀️";
+    }
+}
+
+function toggleTheme() {
+    document.body.classList.toggle("dark");
+    const isDark = document.body.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+    document.getElementById("theme-btn").textContent = isDark ? "☀️" : "🌙";
+}
 
 function initTabs() {
     const tabs = document.querySelectorAll(".tab");
@@ -67,20 +83,31 @@ function showError(msg) {
     }
 }
 
+let statsData = {};
+
+let historyData = [];
+let logsData = [];
+
 async function refreshAll() {
     showLoading(true);
     showError("");
 
     try {
-        const [channelsRes, pipelinesRes, summaryRes] = await Promise.all([
+        const [channelsRes, pipelinesRes, summaryRes, statsRes, historyRes, logsRes] = await Promise.all([
             fetch("/api/channels"),
             fetch("/api/pipelines"),
-            fetch("/api/summary")
+            fetch("/api/summary"),
+            fetch("/api/stats"),
+            fetch("/api/history"),
+            fetch("/api/logs")
         ]);
 
         channelsData = await channelsRes.json();
         pipelinesData = await pipelinesRes.json();
         summaryData = await summaryRes.json();
+        statsData = await statsRes.json();
+        historyData = await historyRes.json();
+        logsData = await logsRes.json();
 
         renderAll();
         document.getElementById("last-updated").textContent = `Updated: ${new Date().toLocaleTimeString()}`;
@@ -92,11 +119,56 @@ async function refreshAll() {
 }
 
 function renderAll() {
+    renderStats();
     renderChannels();
     renderPipelines();
     renderSummary();
+    renderHistory();
+    renderLogs();
     updateCount();
     filterTable();
+}
+
+function renderHistory() {
+    const container = document.getElementById("history-container");
+    if (!historyData.length) {
+        container.innerHTML = "<p>No history available</p>";
+        return;
+    }
+    container.innerHTML = historyData.map(h => `
+        <div class="history-item ${h.runs.some(r => r.type === 'error') ? 'error' : ''}">
+            <div class="history-pipeline">${escapeHtml(h.pipeline)}</div>
+            ${h.runs.map(r => `
+                <div class="history-run ${r.type}">
+                    <span>${escapeHtml(r.timestamp)}</span> - ${escapeHtml(r.message)}
+                </div>
+            `).join("")}
+        </div>
+    `).join("");
+}
+
+function renderLogs() {
+    const container = document.getElementById("logs-container");
+    if (!logsData.length) {
+        container.innerHTML = "<p>No logs available</p>";
+        return;
+    }
+    container.innerHTML = logsData.map(l => `
+        <div class="log-item">
+            <div class="log-pipeline">${escapeHtml(l.pipeline)}</div>
+            <div class="log-lines">${escapeHtml(l.lines.join("\n"))}</div>
+        </div>
+    `).join("");
+}
+
+function renderStats() {
+    if (!statsData.total_pipelines) return;
+    document.getElementById("stat-total-pipelines").textContent = statsData.total_pipelines;
+    document.getElementById("stat-enabled-pipelines").textContent = statsData.enabled_pipelines;
+    document.getElementById("stat-disabled-pipelines").textContent = statsData.disabled_pipelines;
+    document.getElementById("stat-total-channels").textContent = statsData.total_channels;
+    document.getElementById("stat-total-members").textContent = statsData.total_members.toLocaleString();
+    document.getElementById("stat-public-channels").textContent = statsData.public_channels;
 }
 
 function sortData(data, key, direction) {
@@ -166,6 +238,10 @@ function renderSummary() {
 }
 
 function updateCount() {
+    if (currentTab === "stats" || currentTab === "history" || currentTab === "logs") {
+        document.getElementById("count").textContent = "";
+        return;
+    }
     let count = 0;
     if (currentTab === "channels") count = channelsData.length;
     else if (currentTab === "pipelines") count = pipelinesData.length;

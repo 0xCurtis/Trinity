@@ -32,7 +32,9 @@ def get_chat_info(chat_id):
             chat = data.get("result", {})
             username = chat.get("username")
             is_public = bool(username)
-            public_link = f"https://t.me/{username}" if username else chat.get("invite_link")
+            public_link = (
+                f"https://t.me/{username}" if username else chat.get("invite_link")
+            )
             return {
                 "id": chat.get("id"),
                 "title": chat.get("title", "Unknown"),
@@ -54,7 +56,9 @@ def get_member_count(chat_id):
 
     try:
         response = requests.get(
-            get_telegram_api_url("getChatMemberCount"), params={"chat_id": chat_id}, timeout=10
+            get_telegram_api_url("getChatMemberCount"),
+            params={"chat_id": chat_id},
+            timeout=10,
         )
         data = response.json()
         if data.get("ok"):
@@ -158,6 +162,122 @@ def api_health():
             "token_configured": bool(TELEGRAM_BOT_TOKEN),
         }
     )
+
+
+@app.route("/api/stats")
+def api_stats():
+    pipelines = load_pipelines()
+    chat_ids = get_unique_chat_ids(pipelines)
+
+    total_pipelines = len(pipelines)
+    enabled_pipelines = sum(1 for p in pipelines if p.get("enabled", False))
+    disabled_pipelines = total_pipelines - enabled_pipelines
+    total_channels = len(chat_ids)
+
+    channel_stats = []
+    for chat_id in chat_ids:
+        info = get_chat_info(chat_id)
+        if info.get("id"):
+            info["member_count"] = get_member_count(chat_id)
+            channel_stats.append(info)
+
+    total_members = sum(ch.get("member_count", 0) or 0 for ch in channel_stats)
+    public_channels = sum(1 for ch in channel_stats if ch.get("is_public", False))
+
+    return jsonify(
+        {
+            "total_pipelines": total_pipelines,
+            "enabled_pipelines": enabled_pipelines,
+            "disabled_pipelines": disabled_pipelines,
+            "total_channels": total_channels,
+            "total_members": total_members,
+            "public_channels": public_channels,
+            "private_channels": total_channels - public_channels,
+        }
+    )
+
+
+@app.route("/api/history")
+def api_history():
+    LOGS_DIR = BASE_DIR / "bot" / "logs"
+    pipelines = load_pipelines()
+
+    history = []
+    for p in pipelines:
+        pipeline_name = p.get("name", "unknown")
+        log_file = LOGS_DIR / f"{pipeline_name}.log"
+
+        runs = []
+        if log_file.exists():
+            try:
+                with open(log_file, encoding="utf-8") as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        line = line.strip()
+                        if "created at" in line:
+                            timestamp = (
+                                line.split("created at ")[-1][:19]
+                                if "created at " in line
+                                else ""
+                            )
+                            runs.append(
+                                {
+                                    "type": "created",
+                                    "timestamp": timestamp,
+                                    "message": line,
+                                }
+                            )
+                        elif "Pipeline executed successfully" in line:
+                            timestamp = line.split(" : ")[0] if " : " in line else ""
+                            runs.append(
+                                {
+                                    "type": "success",
+                                    "timestamp": timestamp,
+                                    "message": "Executed successfully",
+                                }
+                            )
+                        elif "error" in line.lower() or "failed" in line.lower():
+                            timestamp = line.split(" : ")[0] if " : " in line else ""
+                            runs.append(
+                                {
+                                    "type": "error",
+                                    "timestamp": timestamp,
+                                    "message": line[:200],
+                                }
+                            )
+            except Exception:
+                pass
+
+        history.append({"pipeline": pipeline_name, "runs": runs[-10:] if runs else []})
+
+    return jsonify(history)
+
+
+@app.route("/api/logs")
+def api_logs():
+    LOGS_DIR = BASE_DIR / "bot" / "logs"
+    pipelines = load_pipelines()
+
+    logs = []
+    for p in pipelines:
+        pipeline_name = p.get("name", "unknown")
+        log_file = LOGS_DIR / f"{pipeline_name}.log"
+
+        if log_file.exists():
+            try:
+                with open(log_file, encoding="utf-8") as f:
+                    lines = f.readlines()
+                    recent_lines = lines[-50:] if len(lines) > 50 else lines
+                    logs.append(
+                        {
+                            "pipeline": pipeline_name,
+                            "lines": [line.strip() for line in recent_lines],
+                        }
+                    )
+            except Exception:
+                logs.append({"pipeline": pipeline_name, "lines": ["Error reading log"]})
+
+    return jsonify(logs)
 
 
 if __name__ == "__main__":
