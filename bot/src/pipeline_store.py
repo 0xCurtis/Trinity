@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from pipeline import MyPipeline
+from src.pipeline import MyPipeline
 
 
 class MyPipelineStore:
