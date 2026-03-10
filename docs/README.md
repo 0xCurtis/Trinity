@@ -2,49 +2,142 @@
 
 Trinity is a content automation system that scrapes content from sources (Reddit, RedGifs) and posts it to destinations (Telegram, Twitter).
 
-## Architecture
+## Project Structure
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    Maker    │ ──► │  Middleware │ ──► │   Poster    │
-│  (Source)   │     │ (Processing)│     │ (Destination)│
-└─────────────┘     └─────────────┘     └─────────────┘
+trinity/
+├── bot/                    # Main automation bot
+│   ├── src/               # Source code
+│   ├── pipelines/         # Pipeline configs
+│   ├── tests/             # Tests
+│   ├── logs/              # Bot logs
+│   ├── history/           # Post history
+│   ├── .last_run/         # Last run timestamps
+│   └── runner.py          # Entry point
+│
+├── dashboard/             # Web dashboard
+│   ├── app.py            # Flask app
+│   ├── static/           # JS, CSS
+│   └── templates/        # HTML
+│
+└── docs/                  # Documentation
 ```
 
-- **Makers**: Fetch content from external sources (Reddit, RedGifs)
-- **Middlewares**: Process content between fetch and post (optional)
-- **Posters**: Send content to destinations (Telegram, Twitter)
+## Local Development
 
-## Quick Start
+### Bot
+```bash
+cd bot
+uv sync
+uv run python runner.py
+```
 
-### 1. Environment Setup
+### Dashboard
+```bash
+cd dashboard
+uv sync
+uv run gunicorn -w 4 -b 127.0.0.1:8080 app:app
+# Or for dev: uv run python app.py
+```
 
-Copy the example environment file and fill in your secrets:
+### Tests
+```bash
+cd bot
+uv run pytest
+```
+
+---
+
+## VPS Production Deployment
+
+### 1. Upload Files
 
 ```bash
-cp .env.example .env
+# On VPS
+sudo mkdir -p /opt/trinity
+cd /opt/trinity
+# Upload bot/ and dashboard/ folders
 ```
 
-Edit `.env`:
-```env
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-```
-
-**Note:** Telegram channel IDs can be kept raw in pipeline configs - only the bot token is secret.
-
-### 2. Run the Pipeline
+### 2. Bot - Cron Job
 
 ```bash
-# Run manually
-python runner.py
-
-# Or use Docker
-docker-compose up
+# Add to crontab (crontab -e)
+*/15 * * * * cd /opt/trinity/bot && /opt/trinity/bot/.venv/bin/python runner.py >> /var/log/trinity.log 2>&1
 ```
+
+### 3. Dashboard - Systemd Service
+
+Create `/etc/systemd/system/trinity-dashboard.service`:
+```ini
+[Unit]
+Description=Trinity Dashboard
+
+[Service]
+Type=notify
+WorkingDirectory=/opt/trinity/dashboard
+ExecStart=/opt/trinity/dashboard/.venv/bin/gunicorn -w 4 -b 127.0.0.1:8080 app:app
+Restart=always
+User=www-data
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable trinity-dashboard
+sudo systemctl start trinity-dashboard
+```
+
+### 4. Nginx with Password Protection
+
+**Install htpasswd tool:**
+```bash
+sudo apt install apache2-utils
+```
+
+**Create password:**
+```bash
+sudo htpasswd -c /etc/nginx/.htpasswd admin
+```
+
+**Nginx config** (`/etc/nginx/sites-available/trinity`):
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        
+        # Password protect
+        auth_basic "Trinity Dashboard";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
+```
+
+**Enable:**
+```bash
+sudo ln -s /etc/nginx/sites-available/trinity /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 5. Optional: HTTPS with Let's Encrypt
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+---
 
 ## Configuration
 
-### Pipeline Config (`pipelines/*.json`)
+### Pipeline Config (`bot/pipelines/*.json`)
 
 Each pipeline is defined by a JSON file:
 
@@ -214,73 +307,17 @@ Use `${ENV_VAR_NAME}` syntax to reference environment variables:
 
 This will be resolved at runtime. If the environment variable is not set, the pipeline will fail to load with an error.
 
-## Running with Docker
-
-```bash
-# Build and run
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
-
-The Docker container expects:
-- `TELEGRAM_BOT_TOKEN` environment variable (set in docker-compose.yml or .env)
-
 ## API Endpoints (Health Check)
-
-When using Flask-based health checks:
 
 | Endpoint | Description |
 |----------|-------------|
 | `/health` | Basic health check |
 | `/status` | Pipeline status and uptime |
 
-## Development
-
-### Running Tests
+## Code Quality
 
 ```bash
-uv sync --dev
-uv run pytest
-```
-
-### Code Quality
-
-```bash
+cd bot
 uv run ruff check .
 uv run ruff check . --fix  # Auto-fix
-```
-
-## File Structure
-
-```
-Trinity/
-├── runner.py              # Main entry point
-├── src/
-│   ├── config.py          # Configuration & env var resolution
-│   ├── pipeline.py        # Core pipeline execution
-│   ├── pipeline_store.py  # Pipeline management
-│   ├── retry.py          # Retry decorator with backoff
-│   ├── health.py         # Health check server
-│   ├── logging_config.py # Logging setup
-│   ├── maker/            # Content sources
-│   │   ├── reddit_maker.py
-│   │   ├── redgifs_maker.py
-│   │   └── string_maker.py
-│   ├── middleware/       # Processing middlewares
-│   │   └── fake_delay.py
-│   └── poster/          # Output destinations
-│       ├── telegram_poster.py
-│       ├── twitter_post.py
-│       └── console_poster.py
-├── pipelines/            # Pipeline configurations
-│   ├── global.json      # Global settings
-│   └── *.json          # Individual pipelines
-├── tests/               # Test files
-├── Dockerfile
-└── docker-compose.yml
 ```
