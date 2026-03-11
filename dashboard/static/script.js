@@ -216,6 +216,10 @@ function renderPipelines() {
             <td>${formatSource(p.source)}</td>
             <td>${escapeHtml(p.target_channel || "-")}</td>
             <td data-sort-value="${p.run_every_minutes ?? -1}">${p.run_every_minutes ? p.run_every_minutes + " min" : "-"}</td>
+            <td>
+                <button class="action-btn" onclick="openEditModal('${escapeHtml(p.name)}')">Edit</button>
+                <button class="action-btn" onclick="openDeleteModal('${escapeHtml(p.name)}')">Delete</button>
+            </td>
         </tr>
     `).join("");
 }
@@ -282,4 +286,149 @@ function escapeHtml(str) {
 function truncate(str, len) {
     if (!str) return "";
     return str.length > len ? str.substring(0, len) + "..." : str;
+}
+
+let templatesData = {};
+let editingPipelineName = null;
+let deletingPipelineName = null;
+
+async function loadTemplates() {
+    try {
+        const res = await fetch("/api/templates");
+        templatesData = await res.json();
+        const select = document.getElementById("template-select");
+        select.innerHTML = '<option value="">-- Select Template --</option>';
+        for (const [key, _] of Object.entries(templatesData)) {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = key;
+            select.appendChild(option);
+        }
+    } catch (e) {
+        console.error("Failed to load templates:", e);
+    }
+}
+
+function openCreateModal() {
+    editingPipelineName = null;
+    document.getElementById("modal-title").textContent = "Create Pipeline";
+    document.getElementById("pipeline-name").value = "";
+    document.getElementById("pipeline-name").disabled = false;
+    document.getElementById("template-select-wrapper").style.display = "block";
+    document.getElementById("pipeline-json").value = "";
+    document.getElementById("validation-error").style.display = "none";
+    document.getElementById("pipeline-modal").style.display = "flex";
+    loadTemplates();
+}
+
+async function openEditModal(name) {
+    editingPipelineName = name;
+    document.getElementById("modal-title").textContent = "Edit Pipeline";
+    document.getElementById("pipeline-name").value = name;
+    document.getElementById("pipeline-name").disabled = true;
+    document.getElementById("template-select-wrapper").style.display = "none";
+    
+    try {
+        const res = await fetch(`/api/pipelines/${name}`);
+        const data = await res.json();
+        document.getElementById("pipeline-json").value = JSON.stringify(data, null, 2);
+    } catch (e) {
+        showError("Failed to load pipeline");
+    }
+    document.getElementById("validation-error").style.display = "none";
+    document.getElementById("pipeline-modal").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("pipeline-modal").style.display = "none";
+    editingPipelineName = null;
+}
+
+function loadTemplate() {
+    const templateKey = document.getElementById("template-select").value;
+    if (!templateKey || !templatesData[templateKey]) return;
+    
+    const template = templatesData[templateKey];
+    document.getElementById("pipeline-json").value = JSON.stringify(template, null, 2);
+}
+
+async function savePipeline() {
+    const name = document.getElementById("pipeline-name").value.trim();
+    const jsonStr = document.getElementById("pipeline-json").value;
+    const errorEl = document.getElementById("validation-error");
+    
+    if (!name) {
+        errorEl.textContent = "Pipeline name is required";
+        errorEl.style.display = "block";
+        return;
+    }
+    
+    let config;
+    try {
+        config = JSON.parse(jsonStr);
+    } catch (e) {
+        errorEl.textContent = "Invalid JSON: " + e.message;
+        errorEl.style.display = "block";
+        return;
+    }
+    
+    config.name = name;
+    
+    const url = editingPipelineName 
+        ? `/api/pipelines/${editingPipelineName}`
+        : "/api/pipelines";
+    const method = editingPipelineName ? "PUT" : "POST";
+    
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(config)
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+            errorEl.textContent = data.error || "Failed to save";
+            errorEl.style.display = "block";
+            return;
+        }
+        
+        closeModal();
+        refreshAll();
+    } catch (e) {
+        errorEl.textContent = "Error: " + e.message;
+        errorEl.style.display = "block";
+    }
+}
+
+function openDeleteModal(name) {
+    deletingPipelineName = name;
+    document.getElementById("delete-pipeline-name").textContent = name;
+    document.getElementById("delete-modal").style.display = "flex";
+}
+
+function closeDeleteModal() {
+    document.getElementById("delete-modal").style.display = "none";
+    deletingPipelineName = null;
+}
+
+async function confirmDelete() {
+    if (!deletingPipelineName) return;
+    
+    try {
+        const res = await fetch(`/api/pipelines/${deletingPipelineName}`, {
+            method: "DELETE"
+        });
+        
+        if (!res.ok) {
+            const data = await res.json();
+            showError(data.error || "Failed to delete");
+            return;
+        }
+        
+        closeDeleteModal();
+        refreshAll();
+    } catch (e) {
+        showError("Error: " + e.message);
+    }
 }

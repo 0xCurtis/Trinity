@@ -2,7 +2,7 @@ import json
 import os
 import requests
 from pathlib import Path
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -278,6 +278,166 @@ def api_logs():
                 logs.append({"pipeline": pipeline_name, "lines": ["Error reading log"]})
 
     return jsonify(logs)
+
+
+def validate_pipeline(pipeline: dict) -> tuple[bool, str]:
+    """Validate pipeline configuration."""
+    if not pipeline.get("name"):
+        return False, "Pipeline name is required"
+
+    name = pipeline["name"]
+    if not name.replace("_", "").isalnum():
+        return False, "Pipeline name must be alphanumeric with underscores only"
+
+    if not pipeline.get("source", {}).get("task"):
+        return False, "source.task is required"
+
+    if not pipeline.get("post", {}).get("task"):
+        return False, "post.task is required"
+
+    interval = pipeline.get("run_every_minutes")
+    if interval is not None:
+        try:
+            interval = int(interval)
+            if interval <= 0:
+                return False, "run_every_minutes must be a positive integer"
+        except (ValueError, TypeError):
+            return False, "run_every_minutes must be a valid integer"
+
+    return True, ""
+
+
+def create_backup(pipeline_name: str) -> bool:
+    """Create a backup of a pipeline before editing."""
+    pipeline_file = PIPELINES_DIR / f"{pipeline_name}.json"
+    if not pipeline_file.exists():
+        return False
+
+    backups_dir = PIPELINES_DIR / ".backups"
+    backups_dir.mkdir(exist_ok=True)
+
+    import time
+
+    backup_file = backups_dir / f"{pipeline_name}_{int(time.time())}.json"
+
+    try:
+        with open(pipeline_file, encoding="utf-8") as src:
+            with open(backup_file, "w", encoding="utf-8") as dst:
+                dst.write(src.read())
+
+        backups = sorted(backups_dir.glob(f"{pipeline_name}_*.json"))
+        while len(backups) > 3:
+            backups[0].unlink()
+            backups.pop(0)
+
+        return True
+    except Exception:
+        return False
+
+
+@app.route("/api/templates")
+def api_templates():
+    """Get available pipeline templates."""
+    templates_file = Path(__file__).parent / "templates" / "pipeline_templates.json"
+    if templates_file.exists():
+        with open(templates_file, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    return jsonify({})
+
+
+@app.route("/api/pipelines/<name>", methods=["GET"])
+def api_pipeline_get(name):
+    """Get a specific pipeline."""
+    pipeline_file = PIPELINES_DIR / f"{name}.json"
+    if not pipeline_file.exists():
+        return jsonify({"error": "Pipeline not found"}), 404
+
+    try:
+        with open(pipeline_file, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pipelines", methods=["POST"])
+def api_pipeline_create():
+    """Create a new pipeline."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Pipeline name is required"}), 400
+
+    pipeline_file = PIPELINES_DIR / f"{name}.json"
+    if pipeline_file.exists():
+        return jsonify({"error": "Pipeline already exists"}), 400
+
+    valid, error = validate_pipeline(data)
+    if not valid:
+        return jsonify({"error": error}), 400
+
+    try:
+        with open(pipeline_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return jsonify({"success": True, "pipeline": data})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pipelines/<name>", methods=["PUT"])
+def api_pipeline_update(name):
+    """Update an existing pipeline."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    pipeline_file = PIPELINES_DIR / f"{name}.json"
+    if not pipeline_file.exists():
+        return jsonify({"error": "Pipeline not found"}), 404
+
+    create_backup(name)
+
+    valid, error = validate_pipeline(data)
+    if not valid:
+        return jsonify({"error": error}), 400
+
+    try:
+        with open(pipeline_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return jsonify({"success": True, "pipeline": data})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pipelines/<name>", methods=["DELETE"])
+def api_pipeline_delete(name):
+    """Delete a pipeline."""
+    pipeline_file = PIPELINES_DIR / f"{name}.json"
+    if not pipeline_file.exists():
+        return jsonify({"error": "Pipeline not found"}), 404
+
+    create_backup(name)
+
+    try:
+        pipeline_file.unlink()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pipelines/backup/<name>", methods=["GET"])
+def api_pipeline_backups(name):
+    """Get available backups for a pipeline."""
+    backups_dir = PIPELINES_DIR / ".backups"
+    backups = []
+
+    if backups_dir.exists():
+        for f in sorted(backups_dir.glob(f"{name}_*.json"), reverse=True):
+            backups.append({"name": f.name, "timestamp": f.stat().st_mtime})
+
+    return jsonify(backups)
 
 
 if __name__ == "__main__":

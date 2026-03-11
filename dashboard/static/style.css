@@ -360,6 +360,138 @@ th.sort-desc::after {
     color: var(--text-secondary);
 }
 
+.table-header {
+    padding: 16px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-header button {
+    background: var(--enabled);
+    color: #fff;
+}
+
+.table-header button:hover {
+    background: #1e7e34;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.modal-header .close {
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: monospace;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    resize: vertical;
+}
+
+.validation-error {
+    color: var(--disabled);
+    font-size: 13px;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 4px;
+}
+
+.warning {
+    color: var(--disabled);
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+button.danger {
+    background: var(--disabled);
+    color: #fff;
+}
+
+button.danger:hover {
+    background: #c82333;
+}
+
+.action-btn {
+    padding: 4px 8px;
+    margin-right: 4px;
+    font-size: 12px;
+}
+
 @media (max-width: 768px) {
     header {
         flex-direction: column;

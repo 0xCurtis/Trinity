@@ -1,0 +1,131 @@
+{
+  "blank": {
+    "name": "",
+    "description": "",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
+  },
+  "redgifs_to_telegram": {
+    "name": "",
+    "description": "Fetch videos from RedGifs and post to Telegram",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
+  },
+  "reddit_to_telegram": {
+    "name": "",
+    "description": "Fetch posts from Reddit and post to Telegram",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 30,
+    "source": {
+      "task": "src.maker.reddit_maker.reddit",
+      "reddit": {
+        "subreddit": "",
+        "sort": "hot",
+        "limit": 10,
+        "time_filter": "day"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
+  },
+  "redgifs_to_twitter": {
+    "name": "",
+    "description": "Fetch videos from RedGifs and post to Twitter",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.twitter_post.twitter"
+    },
+    "auth": {
+      "twitter": {
+        "api_key": "${TWITTER_API_KEY}",
+        "api_key_secret": "${TWITTER_API_KEY_SECRET}",
+        "access_token": "${TWITTER_ACCESS_TOKEN}",
+        "access_token_secret": "${TWITTER_ACCESS_TOKEN_SECRET}"
+      }
+    },
+    "twitter": {
+      "text": ""
+    }
+  },
+  "console_debug": {
+    "name": "",
+    "description": "Debug pipeline - prints to console only",
+    "enabled": true,
+    "unique_posts": false,
+    "run_every_minutes": 60,
+    "source": {
+      "task": "src.maker.string_maker.string",
+      "string": {
+        "text": "Debug message"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.console_poster.console"
+    }
+  }
+}
