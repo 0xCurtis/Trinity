@@ -197,5 +197,120 @@
     "post": {
       "task": "src.poster.console_poster.console"
     }
+  },
+  "redgifs_with_image_watermark": {
+    "name": "",
+    "description": "RedGifs with image watermark",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [
+      "src.middleware.watermark.watermark"
+    ],
+    "watermark": {
+      "type": "image",
+      "image_path": "/app/watermark.png",
+      "position": "bottom-right",
+      "opacity": 0.5,
+      "margin": 20
+    },
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
+  },
+  "redgifs_with_text_watermark": {
+    "name": "",
+    "description": "RedGifs with text watermark",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [
+      "src.middleware.watermark.watermark"
+    ],
+    "watermark": {
+      "type": "text",
+      "text": "@MyChannel",
+      "font": "Arial",
+      "font_size": 32,
+      "color": "white",
+      "position": "bottom-right",
+      "opacity": 0.7,
+      "margin": 20
+    },
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
+  },
+  "reddit_with_watermark": {
+    "name": "",
+    "description": "Reddit with text watermark",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 30,
+    "source": {
+      "task": "src.maker.reddit_maker.reddit",
+      "reddit": {
+        "subreddit": "",
+        "sort": "hot",
+        "limit": 10,
+        "time_filter": "day"
+      }
+    },
+    "middleware": [
+      "src.middleware.watermark.watermark"
+    ],
+    "watermark": {
+      "type": "text",
+      "text": "@MyChannel",
+      "font_size": 24,
+      "color": "white",
+      "position": "top-right",
+      "opacity": 0.6,
+      "margin": 10
+    },
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": null
+    }
   }
 }
