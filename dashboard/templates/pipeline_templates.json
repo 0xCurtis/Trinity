@@ -53,6 +53,42 @@
       "buttons": null
     }
   },
+  "redgifs_with_buttons": {
+    "name": "",
+    "description": "RedGifs with custom buttons",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 15,
+    "source": {
+      "task": "src.maker.redgifs_maker.redgifs",
+      "redgifs": {
+        "tags": "",
+        "sort": "trending"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": [
+        [
+          {"text": "🔗 Source", "url": "https://redgifs.com"},
+          {"text": "📺 Our Channel", "url": "https://t.me/yourchannel"}
+        ],
+        [
+          {"text": "🔥 Trending", "url": "https://t.me/yourchannel"},
+          {"text": "✨ AI Generated", "url": "https://t.me/yourchannel"}
+        ]
+      ]
+    }
+  },
   "reddit_to_telegram": {
     "name": "",
     "description": "Fetch posts from Reddit and post to Telegram",
@@ -80,6 +116,40 @@
     "telegram": {
       "chat_id": "",
       "buttons": null
+    }
+  },
+  "reddit_with_buttons": {
+    "name": "",
+    "description": "Reddit posts with buttons",
+    "enabled": true,
+    "unique_posts": true,
+    "run_every_minutes": 30,
+    "source": {
+      "task": "src.maker.reddit_maker.reddit",
+      "reddit": {
+        "subreddit": "",
+        "sort": "hot",
+        "limit": 10,
+        "time_filter": "day"
+      }
+    },
+    "middleware": [],
+    "post": {
+      "task": "src.poster.telegram_poster.telegram"
+    },
+    "auth": {
+      "telegram": {
+        "token": "${TELEGRAM_BOT_TOKEN}"
+      }
+    },
+    "telegram": {
+      "chat_id": "",
+      "buttons": [
+        [
+          {"text": "🔗 View Post", "url": "https://reddit.com"},
+          {"text": "💬 Comments", "url": "https://reddit.com"}
+        ]
+      ]
     }
   },
   "redgifs_to_twitter": {
