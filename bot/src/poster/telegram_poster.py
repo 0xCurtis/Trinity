@@ -1,4 +1,5 @@
 import json
+import os
 
 import requests
 
@@ -33,6 +34,20 @@ def send_media(
 
     url = f"https://api.telegram.org/bot{bot_token}/{method}"
     reply_markup = json.dumps({"inline_keyboard": buttons or []})
+
+    try:
+        return _send_file(bot_token, chat_id, file_path, media_type, method, reply_markup, text)
+    except RuntimeError as e:
+        error_msg = str(e)
+        if "file too large" in error_msg.lower() or "payload too large" in error_msg.lower():
+            file_size = os.path.getsize(file_path) / (1024 * 1024)
+            print(f"File too large ({file_size:.1f}MB), trying fallback...")
+            return _send_as_document_fallback(bot_token, chat_id, file_path, reply_markup, text)
+        raise
+
+
+def _send_file(bot_token, chat_id, file_path, media_type, method, reply_markup, text):
+    url = f"https://api.telegram.org/bot{bot_token}/{method}"
     with open(file_path, "rb") as f:
         files = {media_type: f}
         data = {"chat_id": chat_id, "reply_markup": reply_markup, "caption": text or ""}
@@ -43,6 +58,25 @@ def send_media(
         err = res.get("description", res)
         code = res.get("error_code", "")
         raise RuntimeError(f"Telegram API error {code}: {err}")
+    return res
+
+
+def _send_as_document_fallback(bot_token, chat_id, file_path, reply_markup, text):
+    """Fallback: send large files as document."""
+    url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+
+    file_name = os.path.basename(file_path)
+
+    with open(file_path, "rb") as f:
+        files = {"document": (file_name, f)}
+        data = {"chat_id": chat_id, "reply_markup": reply_markup, "caption": text or ""}
+        response = requests.post(url, files=files, data=data)
+
+    res = response.json()
+    if not res.get("ok"):
+        err = res.get("description", res)
+        code = res.get("error_code", "")
+        raise RuntimeError(f"Telegram API error (document fallback) {code}: {err}")
     return res
 
 
